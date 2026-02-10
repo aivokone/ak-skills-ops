@@ -1,0 +1,6 @@
+{
+  "name": "ak-skills-ops",
+  "version": "1.0.0",
+  "description": "Platform- and tool-specific operational skills for Claude Code",
+  "skills": ["seravo-dev"]
+}

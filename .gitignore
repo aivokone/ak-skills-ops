@@ -1,0 +1,5 @@
+# macOS
+.DS_Store
+
+# Claude/Codex local agent settings (do not commit)
+.claude/settings.local.json
