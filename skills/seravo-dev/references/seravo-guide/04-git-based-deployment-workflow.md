@@ -55,7 +55,14 @@ Host mysite
     HostName example.seravo.com
     Port 12345
     User example
-    IdentityFile ~/.ssh/id_rsa
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    AddressFamily inet
+```
+
+Prime host key once (IPv4-safe for Seravo):
+```bash
+ssh-keyscan -4 -p 12345 example.seravo.com >> ~/.ssh/known_hosts
 ```
 
 Then simply: `ssh mysite`

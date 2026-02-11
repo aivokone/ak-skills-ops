@@ -69,10 +69,23 @@
     "prompt": "I keep getting 'Permission denied' when trying to SSH to my Seravo site. How do I set up SSH keys properly?",
     "expectations": [
       "Shows ssh-keygen command for generating keys",
-      "Explains ssh-copy-id to copy public key to server",
-      "Provides syntax with port number",
-      "Mentions testing connection",
+      "Shows ~/.ssh/config Host entry with AddressFamily inet",
+      "Shows ssh-keyscan -4 -p PORT HOST before ssh-copy-id",
+      "Explains ssh-copy-id with port number and IPv4-safe option",
+      "Mentions sshpass fallback for non-interactive shells",
+      "Mentions testing with ssh -4",
       "Notes Windows users need manual key copy"
+    ]
+  },
+  {
+    "name": "SSH keyscan broken pipe handling",
+    "prompt": "ssh-keyscan keeps failing with Broken pipe for my Seravo host. What should I do?",
+    "expectations": [
+      "Explains IPv6-first resolution can fail while IPv4 works",
+      "Shows ssh-keyscan -4 -p PORT HOST",
+      "Suggests AddressFamily inet in ~/.ssh/config",
+      "Shows ssh -v -4 verification command",
+      "Avoids writing real credentials in examples"
     ]
   },
   {

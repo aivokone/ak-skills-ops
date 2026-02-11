@@ -54,6 +54,7 @@ This skill provides expert guidance on:
 
 ### 🔐 Security Best Practices
 - SSH key management
+- Seravo IPv4-safe SSH bootstrap (`AddressFamily inet`, `ssh-keyscan -4`, `sshpass` fallback for non-interactive shells)
 - Password and session resets
 - Credential handling
 - Access auditing

@@ -30,7 +30,7 @@ The table below is the canonical skills index for this repository.
 
 Operational WordPress guidance for Seravo-hosted projects, including deployment,
 local environment setup, database workflows, and Seravo-specific incident
-response.
+response. Includes IPv4-safe SSH onboarding patterns for Seravo host access.
 
 Source:
 - `skills/seravo-dev/SKILL.md`

@@ -10,8 +10,42 @@ ssh-keygen -t ed25519 -C "your_email@example.com"
 # Or RSA 4096-bit
 ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 
-# Add to Seravo
-ssh-copy-id -p 12345 user@example.seravo.com
+# Add Seravo host profile (force IPv4)
+cat >> ~/.ssh/config <<'EOF'
+Host mysite
+    HostName example.seravo.com
+    Port 12345
+    User example
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    AddressFamily inet
+EOF
+
+# Add host key before first login
+ssh-keyscan -4 -p 12345 example.seravo.com >> ~/.ssh/known_hosts
+
+# Add key to Seravo
+ssh-copy-id -o AddressFamily=inet -p 12345 user@example.seravo.com
+
+# Verify
+ssh -4 -p 12345 user@example.seravo.com 'echo OK'
+```
+
+Seravo note:
+- DNS may return IPv6 and IPv4, but SSH port may only accept IPv4.
+- Prefer `AddressFamily inet` and `-4` for `ssh` / `ssh-keyscan`.
+
+For non-interactive terminals (agent/CI), use `sshpass` when password bootstrap is required:
+```bash
+if ! command -v sshpass >/dev/null; then
+  if command -v brew >/dev/null; then
+    brew install hudochenkov/sshpass/sshpass
+  elif command -v apt-get >/dev/null; then
+    sudo apt-get update && sudo apt-get install -y sshpass
+  fi
+fi
+
+SSHPASS='YOUR_PASSWORD' sshpass -e ssh-copy-id -o AddressFamily=inet -p 12345 user@example.seravo.com
 ```
 
 **Multiple developers**:

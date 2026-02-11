@@ -22,7 +22,7 @@ This guide is split into small files under `references/seravo-guide/` so an agen
 ## How To Search (Without Opening Everything)
 
 - List sections: `ls references/seravo-guide`
-- Search across sections: `rg -n "wp-backup|wp-pull-production-db|wp-purge-cache|config.yml|deployment|multisite" references/seravo-guide`
+- Search across sections: `rg -n "wp-backup|wp-pull-production-db|wp-purge-cache|config.yml|deployment|multisite|ssh|keyscan|copy-id|AddressFamily" references/seravo-guide`
 - After you find a hit, open only a small slice around it:
   - Example: `rg -n "wp-pull-production-db" references/seravo-guide/03-custom-wp-cli-commands.md`
   - Then: `sed -n '120,220p' references/seravo-guide/03-custom-wp-cli-commands.md`

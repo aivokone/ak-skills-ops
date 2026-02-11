@@ -66,3 +66,13 @@ ssh user@example.seravo.com -p 23456
 # Local Docker
 ssh wordpress.local -F .vagrant/ssh/config
 ```
+
+### Seravo SSH First-Connect (IPv4-Safe)
+
+```bash
+# Add host key before ssh-copy-id / first login
+ssh-keyscan -4 -p 12345 example.seravo.com >> ~/.ssh/known_hosts
+
+# Test with IPv4 forced
+ssh -4 -p 12345 user@example.seravo.com 'echo OK'
+```

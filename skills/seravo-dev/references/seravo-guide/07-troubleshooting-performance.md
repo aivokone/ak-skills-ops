@@ -4,19 +4,54 @@
 
 **1. "Permission denied" errors**
 
-Check SSH key setup:
+Use an IPv4-safe Seravo SSH bootstrap (host key first, then key copy):
 ```bash
-# Generate key if needed
-ssh-keygen -t rsa -b 4096
+# Generate key if needed (preferred)
+ssh-keygen -t ed25519 -C "your_email@example.com"
 
-# Copy to Seravo
-ssh-copy-id -p 12345 user@example.seravo.com
+# Add host profile (Seravo SSH often needs IPv4 forced)
+cat >> ~/.ssh/config <<'EOF'
+Host mysite
+    HostName example.seravo.com
+    Port 12345
+    User example
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    AddressFamily inet
+EOF
 
-# Test connection
-ssh user@example.seravo.com -p 12345
+# Add host key first (avoids "Host key verification failed")
+ssh-keyscan -4 -p 12345 example.seravo.com >> ~/.ssh/known_hosts
+
+# Copy public key to server
+ssh-copy-id -o AddressFamily=inet -p 12345 user@example.seravo.com
+
+# Verify SSH
+ssh -4 -p 12345 user@example.seravo.com 'echo OK'
 ```
 
-Windows users: Manually copy .pub key to `~/.ssh/authorized_keys` on server.
+If you are in a non-interactive shell (agent/CI), `ssh-copy-id` may not be able to prompt for password:
+```bash
+if ! command -v sshpass >/dev/null; then
+  if command -v brew >/dev/null; then
+    brew install hudochenkov/sshpass/sshpass
+  elif command -v apt-get >/dev/null; then
+    sudo apt-get update && sudo apt-get install -y sshpass
+  else
+    echo "Install sshpass manually for your OS, then re-run."
+  fi
+fi
+
+SSHPASS='YOUR_PASSWORD' sshpass -e ssh-copy-id -o AddressFamily=inet -p 12345 user@example.seravo.com
+```
+
+Windows users: Manually copy `.pub` key to `~/.ssh/authorized_keys` on server.
+
+If `ssh-keyscan` fails with `Broken pipe`, confirm with verbose SSH (IPv4 forced):
+```bash
+ssh -v -4 -p 12345 user@example.seravo.com 'exit'
+```
+If logs show IPv6 attempts failing before IPv4 succeeds, keep `AddressFamily inet` in config.
 
 **2. Local site not accessible (Docker)**
 

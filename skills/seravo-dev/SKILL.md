@@ -1,6 +1,6 @@
 ---
 name: seravo-dev
-description: Seravo-hosted WordPress ops: custom wp-* CLI, Git-based deploys, local Docker/Vagrant setup, DB sync, and Seravo-specific troubleshooting.
+description: "Seravo-hosted WordPress ops: custom wp-* CLI, Git-based deploys, local Docker/Vagrant setup, DB sync, and Seravo-specific troubleshooting."
 ---
 
 # Seravo Developer Guide
@@ -61,7 +61,7 @@ Load only the relevant section file based on task.
 Use targeted search across the section directory instead of opening everything:
 
 ```bash
-rg -n "wp-pull-production-db|wp-backup|wp-purge-cache|config\\.yml|deployment|troubleshooting|performance|multisite" references/seravo-guide
+rg -n "wp-pull-production-db|wp-backup|wp-purge-cache|config\\.yml|deployment|troubleshooting|performance|multisite|ssh|keyscan|copy-id|AddressFamily" references/seravo-guide
 ```
 
 Then open only the matching section file and the relevant subsection(s) inside it.

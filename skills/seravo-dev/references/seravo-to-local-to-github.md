@@ -18,11 +18,14 @@ Clone the production repo into an empty directory:
 git clone --origin production ssh://USER@HOST:PORT/data/wordpress .
 ```
 
-- First connection may block on host key verification. If you need non-interactive first connect:
+- First connection may block on host key verification. Prefer explicit host key registration over IPv4:
 
 ```bash
-ssh -o StrictHostKeyChecking=accept-new -p PORT USER@HOST 'echo OK'
+ssh-keyscan -4 -p PORT HOST >> ~/.ssh/known_hosts
+ssh -4 -p PORT USER@HOST 'echo OK'
 ```
+
+- For repeated usage, add `AddressFamily inet` for Seravo hosts in `~/.ssh/config` to avoid IPv6-first connection failures.
 
 ## 2) Prevent Docker Container Name Conflicts Immediately
 
@@ -127,10 +130,19 @@ ssh-keygen -t ed25519 -f .ssh/seravo -N '' -C 'seravo-project'
 - Add the public key to the Seravo environment `authorized_keys` (server write, but generally safe).
 - For container usage, copy the key for the `vagrant` user and add an SSH config with host+port.
 
+If password bootstrap is needed in a non-interactive shell:
+```bash
+if ! command -v sshpass >/dev/null; then
+  echo "Install sshpass first (for example: brew install hudochenkov/sshpass/sshpass)"
+fi
+
+SSHPASS='YOUR_PASSWORD' sshpass -e ssh-copy-id -o AddressFamily=inet -i .ssh/seravo.pub -p PORT USER@HOST
+```
+
 Non-interactive check:
 
 ```bash
-ssh -o BatchMode=yes -i .ssh/seravo -p PORT USER@HOST 'echo OK'
+ssh -4 -o BatchMode=yes -i .ssh/seravo -p PORT USER@HOST 'echo OK'
 ```
 
 ## 8) Shadow/Staging Support
@@ -193,4 +205,3 @@ Minimum changes for "full clone":
   - `htdocs/wp-content/mu-plugins/`
 - Keep ignored:
   - `uploads/`, caches, backups
-
