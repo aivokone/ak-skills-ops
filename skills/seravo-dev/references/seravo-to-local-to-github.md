@@ -1,207 +1,187 @@
-# Seravo -> Local (Docker) -> GitHub Private: Import Recipe
+# Seravo -> Local (DDEV) -> GitHub Private: Import Recipe
 
-This is a practical, network-aware import workflow that avoids common Seravo template gotchas.
+This is the recommended end-to-end workflow for Seravo template projects.
+It avoids Seravo local Docker/Vagrant assumptions and works reliably on Apple
+Silicon and non-interactive agent environments.
 
 ## Preconditions
 
-- You have Seravo SSH access to the target environment(s).
-- You have Docker + Compose locally.
-- You have GitHub auth available (`gh auth status` works) if pushing to GitHub.
-
-Note: In some agent/sandbox environments, `git clone` and GitHub API calls may require an escalated run due to DNS/network restrictions.
-
-## 1) Clone From Seravo (Network-Aware)
-
-Clone the production repo into an empty directory:
+- SSH key is already added to the target Seravo environment.
+- Homebrew is available.
+- DDEV is installed:
 
 ```bash
-git clone --origin production ssh://USER@HOST:PORT/data/wordpress .
+brew install ddev/ddev/ddev
+mkcert -install
 ```
 
-- First connection may block on host key verification. Prefer explicit host key registration over IPv4:
+- Colima or Docker Desktop is running.
+- If pushing to GitHub, `gh auth status` should work.
+
+## 1) Clone From Seravo (IPv4-safe)
 
 ```bash
 ssh-keyscan -4 -p PORT HOST >> ~/.ssh/known_hosts
-ssh -4 -p PORT USER@HOST 'echo OK'
+
+git clone --origin production ssh://USER@HOST:PORT/data/wordpress .
 ```
 
-- For repeated usage, add `AddressFamily inet` for Seravo hosts in `~/.ssh/config` to avoid IPv6-first connection failures.
-
-## 2) Prevent Docker Container Name Conflicts Immediately
-
-Seravo templates often use `container_name: ${SITE:-wordpress}`. If you already have a container named `wordpress`, Compose will fail.
-
-Create `.env` before starting Compose:
+If target directory is not empty (for example it already contains `.claude/`):
 
 ```bash
-cat > .env <<'ENV'
-SITE=project-slug
-ENV
+git init
+git remote add production ssh://USER@HOST:PORT/data/wordpress
+git fetch production
+git checkout -b main production/master
 ```
 
-Pick a unique slug per project (for example `akha`).
+## 2) Migrate Composer Constraints (Composer 1 -> 2)
 
-## 3) Start Docker
+Older Seravo template snapshots may pin Composer-1-only constraints.
+Update `composer.json` dependencies to include Composer 2-compatible ranges:
 
-```bash
-docker-compose up -d
-# verify
-docker ps
+```json
+{
+  "require": {
+    "johnpbloch/wordpress-core-installer": "^2.0",
+    "johnpbloch/wordpress-core": "^5.0 || ^6.0",
+    "composer/installers": "^1.0 || ^2.0",
+    "vlucas/phpdotenv": "^2.4 || ^5.0"
+  }
+}
 ```
 
-Determine the container name:
+Then run:
 
 ```bash
-docker ps --format '{{.Names}}' | rg -n "${SITE}" || docker ps --format '{{.Names}}'
+composer update --no-interaction
+test -d htdocs/wordpress && echo OK
 ```
 
-In Seravo templates, the main container is typically `$SITE` or includes it.
+Use `composer update` here, not `composer install`, because lock files from older
+templates are commonly outdated.
 
-## 4) Ensure WordPress Core Exists Before `wp-pull-production-db`
-
-If `htdocs/wordpress` is missing, Seravo `wp-pull-*` commands can fail because there is no WP install to operate on.
-
-Check:
+## 3) Configure DDEV
 
 ```bash
-test -d htdocs/wordpress && echo "WP core exists" || echo "WP core missing"
+ddev config --project-type=wordpress --docroot=htdocs --project-name=SLUG --php-version=8.2
 ```
 
-If missing, fix Composer allow-plugins (common on newer Composer defaults) and install:
+## 4) Patch `wp-config.php` for DDEV + Seravo Compatibility
 
-```bash
-composer config --no-plugins allow-plugins.johnpbloch/wordpress-core-installer true
-composer config --no-plugins allow-plugins.koodimonni/composer-dropin-installer true
-composer config --no-plugins allow-plugins.composer/installers true
-composer install --no-interaction
+Update `htdocs/wp-config.php`.
+
+Add DDEV include before DB settings:
+
+```php
+$ddev_settings = dirname(__FILE__) . '/wp-config-ddev.php';
+if (is_readable($ddev_settings) && !defined('DB_USER')) {
+  require_once($ddev_settings);
+}
 ```
 
-Rationale: without these allow-plugins entries, WordPress core installers may be blocked and the WP directory never materializes.
+Wrap Seravo DB constants with `!defined()` guards:
 
-## 5) Run `wp-pull-*` Commands As `vagrant` (Never root)
-
-Some commands refuse to run as root (`Cannot run as root`). Prefer explicit user selection.
-
-Run inside the container as `vagrant`:
-
-```bash
-CONTAINER=your-container-name
-
-docker exec -it -u vagrant "$CONTAINER" bash -lc 'wp-pull-production-db'
+```php
+if (!defined('DB_NAME')) { define('DB_NAME', getenv('DB_NAME')); }
+if (!defined('DB_USER')) { define('DB_USER', getenv('DB_USER')); }
+if (!defined('DB_PASSWORD')) { define('DB_PASSWORD', getenv('DB_PASSWORD')); }
+if (!defined('DB_HOST')) { define('DB_HOST', getenv('DB_HOST')); }
 ```
 
-Other pulls:
+Dotenv compatibility update for modern setups:
 
-```bash
-docker exec -it -u vagrant "$CONTAINER" bash -lc 'wp-pull-production-plugins'
-docker exec -it -u vagrant "$CONTAINER" bash -lc 'wp-pull-production-themes'
-docker exec -it -u vagrant "$CONTAINER" bash -lc 'wp-pull-production-core'
+```php
+$dotenv = Dotenv\Dotenv::createMutable($root_dir);
+$dotenv->load();
 ```
 
-Interactive prompts to anticipate:
+Why this matters: Seravo template patterns often call `getenv()` directly; without
+guards, DDEV definitions are not honored correctly in local runtime.
 
-- `wp-pull-production-db` may ask URL mapping confirmation: answer `y` only if the mapping matches your local domain.
-- `wp-pull-production-plugins` may ask: "update composer.json … (y/n)". For a clone/import flow, default to `n` unless you intentionally want it to modify Composer config.
+## 5) Disable Local Redis Object Cache Drop-in
 
-Verification:
+Seravo `object-cache.php` expects Redis availability. DDEV defaults may not have
+matching Redis wiring, causing WP-CLI failures.
 
 ```bash
-docker exec -u vagrant "$CONTAINER" bash -lc 'wp option get siteurl && wp option get home'
+mv htdocs/wp-content/object-cache.php htdocs/wp-content/object-cache.php.seravo-bak
 ```
 
-Note: `wp-purge-cache` is meaningful on Seravo servers, but on local development it may be a no-op. Mention that expectation explicitly when recommending it.
-
-## 6) Prefer Direct `docker exec ... wp-pull-*` Over `wp-development-up` For Imports
-
-If `wp-development-up` loops on "Waiting for … start", skip it and use the explicit `docker-compose up -d` + `docker exec -u vagrant …` approach above. It is more debuggable and avoids hidden wait loops.
-
-## 7) SSH Keys: Project-Key Pattern (Optional but Recommended)
-
-If you need a dedicated key for this project:
-
-- Create `./.ssh/` and ensure it is ignored.
-- Generate an ed25519 key:
+## 6) Start Local Environment
 
 ```bash
-mkdir -p .ssh
-ssh-keygen -t ed25519 -f .ssh/seravo -N '' -C 'seravo-project'
+ddev start
 ```
 
-- Add the public key to the Seravo environment `authorized_keys` (server write, but generally safe).
-- For container usage, copy the key for the `vagrant` user and add an SSH config with host+port.
+## 7) Import Production Database Without Seravo Local Container
 
-If password bootstrap is needed in a non-interactive shell:
 ```bash
-if ! command -v sshpass >/dev/null; then
-  echo "Install sshpass first (for example: brew install hudochenkov/sshpass/sshpass)"
-fi
-
-SSHPASS='YOUR_PASSWORD' sshpass -e ssh-copy-id -o AddressFamily=inet -i .ssh/seravo.pub -p PORT USER@HOST
+ssh -4 -p PORT USER@HOST 'wp db export -' | gzip > /tmp/production.sql.gz
+ddev import-db --file=/tmp/production.sql.gz
 ```
 
-Non-interactive check:
+URL rewrite and cache flush (path is required in Seravo template layout):
 
 ```bash
-ssh -4 -o BatchMode=yes -i .ssh/seravo -p PORT USER@HOST 'echo OK'
+ddev wp search-replace 'https://production-url' 'https://SLUG.ddev.site' \
+  --all-tables --path=/var/www/html/htdocs/wordpress
+
+ddev wp cache flush --path=/var/www/html/htdocs/wordpress
 ```
 
-## 8) Shadow/Staging Support
-
-- Staging may be the same host with a different SSH port.
-- You may need to add the same public key to staging `authorized_keys` separately.
-
-Git remote example:
+## 8) Sync Themes, Plugins, and MU Plugins Via Direct rsync
 
 ```bash
-git remote add staging ssh://USER@HOST:STAGING_PORT/data/wordpress
-# verify without deploying
-GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" git push --dry-run staging main
+rsync -avz -e 'ssh -4 -p PORT' USER@HOST:/data/wordpress/htdocs/wp-content/themes/ htdocs/wp-content/themes/
+rsync -avz -e 'ssh -4 -p PORT' USER@HOST:/data/wordpress/htdocs/wp-content/plugins/ htdocs/wp-content/plugins/
+rsync -avz -e 'ssh -4 -p PORT' USER@HOST:/data/wordpress/htdocs/wp-content/mu-plugins/ htdocs/wp-content/mu-plugins/
 ```
 
-## 9) GitHub Private Repo: Avoid SSH Key Collisions
+## 9) Uploads Strategy (Run Last)
 
-Gotcha: if the repo has `git config core.sshCommand ...` set for Seravo, GitHub SSH pushes may incorrectly use the Seravo key.
+Always decide uploads strategy explicitly before executing this step.
+Do this after DB + code/content sync to avoid long-running interruptions.
 
-Recommendation:
+Options:
 
-- Keep Seravo remotes as SSH.
-- Use GitHub `origin` over HTTPS and configure git credential helper via `gh`.
+1. Full rsync of uploads (slow, large disk usage)
+2. Proxy uploads to production (recommended default)
+3. Skip uploads (site works but images may be missing)
+
+Recommended proxy example:
+
+```nginx
+# .ddev/nginx_full/uploads-proxy.conf
+location ~* /wp-content/uploads/ {
+    try_files $uri @production;
+}
+location @production {
+    proxy_pass https://PRODUCTION-URL;
+}
+```
+
+## 10) Optional GitHub Private Push (Avoid SSH Key Collisions)
+
+If repo-level `core.sshCommand` is set for Seravo, GitHub SSH pushes may fail.
+Prefer HTTPS `origin` with `gh auth setup-git`.
 
 ```bash
-# ensures git is configured to use GitHub credentials
 gh auth setup-git
-
-# add GitHub HTTPS origin
 git remote add origin https://github.com/OWNER/REPO.git
-
 git branch -M main
-
 git add -A
-git commit -m "Initial import from Seravo (DOMAIN)"
-
+git commit -m "Initial import from Seravo"
 git push -u origin main
 ```
 
-If you must use SSH for GitHub, do not set `core.sshCommand` globally for the repo. Prefer per-command overrides:
+## 11) Verification Checklist
 
 ```bash
-GIT_SSH_COMMAND='ssh -i .ssh/seravo' git fetch production
+ddev wp option get siteurl --path=/var/www/html/htdocs/wordpress
+ddev wp option get home --path=/var/www/html/htdocs/wordpress
+ddev wp plugin list --path=/var/www/html/htdocs/wordpress
 ```
 
-## 10) `.gitignore` Strategy: Code-Only vs Full Clone
-
-Seravo templates may ignore `composer.lock` or `wp-content/plugins/*` by default. That may be wrong for "full clone" to GitHub.
-
-Choose one:
-
-- Code-only repo: plugins/themes managed by Composer and lockfiles committed.
-- Full clone repo: track `wp-content` code in git; still ignore mutable runtime data.
-
-Minimum changes for "full clone":
-
-- Commit lockfiles.
-- Do not ignore:
-  - `htdocs/wp-content/plugins/`
-  - `htdocs/wp-content/mu-plugins/`
-- Keep ignored:
-  - `uploads/`, caches, backups
+If object cache needs to be restored later, move the backup file back only when
+Redis integration is intentionally configured for local environment.

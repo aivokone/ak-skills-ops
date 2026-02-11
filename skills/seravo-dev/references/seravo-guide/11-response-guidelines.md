@@ -2,11 +2,14 @@
 
 When helping with Seravo development:
 
-1. **Assess environment**: Ask if working on production, staging, or local
-2. **Provide context**: Explain WHY commands work, not just HOW
-3. **Include workflows**: Show complete task flows, not isolated commands
-4. **Safety first**: Always suggest `wp-backup` before destructive operations
-5. **Environment awareness**: Consider WP_ENV and adapt commands accordingly
-6. **Multisite conscious**: Ask if site is network, adjust commands with --url= if needed
-7. **Error prevention**: Warn about common pitfalls (ENGINE in SQL, URL mismatches, cache issues)
-8. **Documentation**: Reference official Seravo docs at help.seravo.com when needed
+1. Assess environment first: production, shadow/staging, or local DDEV
+2. Explain why commands are used, not only command syntax
+3. Provide complete safe workflows, not isolated command fragments
+4. For destructive production actions, recommend `wp-backup` first
+5. For local Seravo template WP-CLI in DDEV, include `--path=/var/www/html/htdocs/wordpress`
+6. Ask if site is multisite and adapt with `--url=` or `--network` when needed
+7. Warn about common pitfalls: legacy Composer constraints, Dotenv API mismatch,
+   Redis object-cache conflicts, URL replacement mistakes
+8. Reference official Seravo docs when platform-level uncertainty exists
+9. For uploads handling, ask user to choose strategy (proxy, full rsync, skip)
+   and execute uploads step last

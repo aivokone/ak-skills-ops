@@ -1,254 +1,159 @@
 # Seravo Developer Skill
 
-A comprehensive skill for WordPress development on Seravo's managed hosting platform, created specifically for developer workflows.
+A practical skill for WordPress development on Seravo's managed hosting platform,
+with a DDEV-first local workflow.
 
 ## Sources, Attribution, and Scope
 
 This skill is primarily based on Seravo's Help Center documentation:
-
 - https://help.seravo.com/en/
 
-It also includes **opinionated additions and changes by Aivokone**:
-
+It also includes opinionated additions and workflow changes by Aivokone:
 - https://github.com/aivokone
 
-These additions cover practical conventions, extra safety checks, and workflow preferences that may go beyond (or differ from) the official Seravo docs. This skill is not an official Seravo publication.
+These additions focus on practical safety checks and agent-friendly local workflows,
+especially for Apple Silicon and non-interactive environments.
 
-## What This Skill Does
+## What This Skill Covers
 
-This skill provides expert guidance on:
+### Custom WP-CLI Commands on Seravo
+- Core Seravo command set (`wp-backup`, `wp-purge-cache`, `wp-list-env`, and more)
+- Safe usage guidance by environment
+- Recovery-oriented command ordering
 
-### 🛠️ Custom WP-CLI Commands
-- Complete reference for all Seravo-specific `wp-*` commands
-- Context about when and why to use each command
-- Examples for backup, database sync, cache management, security, and more
+### Git Deployment Workflows
+- Git-first deployment to Seravo production/shadow
+- Remote and branch patterns
+- Safe deployment practices with verification
 
-### 🚀 Git Deployment Workflows  
-- Git-based deployment to production
-- Git hooks and automated testing
-- Safe deployment practices
+### Local Development With DDEV
+- DDEV bootstrap for Seravo template repositories
+- SSH-based DB/content sync without Seravo local Docker container dependency
+- Required WordPress CLI path usage in DDEV for Seravo directory layout
 
-### 🐳 Local Development Setup
-- Docker and Vagrant (legacy) configuration
-- `config.yml` setup and management
-- Asset proxy for media files
-- Environment parity with production
+### Database Management
+- Production -> local sync with SSH export stream + `ddev import-db`
+- URL replacement and cache handling after import
+- Dangerous local -> production flow with backup-first guardrails
 
-### 🗄️ Database Management
-- Syncing databases between environments (production ↔ local ↔ shadow)
-- URL search-replace workflows
-- Multisite domain mapping
-- Manual export/import procedures
+### Troubleshooting and Performance
+- SSH and access troubleshooting
+- DDEV runtime and WP-CLI path issues
+- Redis object cache conflicts in local setup
+- Seravo-specific debugging commands and log paths
 
-### 🔧 Troubleshooting & Performance
-- Common issues and solutions
-- Performance measurement tools
-- Cache debugging
-- Security auditing
-- Access monitoring
-
-### 🏢 WordPress Multisite
-- Network-specific commands
-- Subdomain/subfolder configuration
-- Database table structure understanding
-
-### 🔐 Security Best Practices
-- SSH key management
-- Seravo IPv4-safe SSH bootstrap (`AddressFamily inet`, `ssh-keyscan -4`, `sshpass` fallback for non-interactive shells)
-- Password and session resets
-- Credential handling
-- Access auditing
-
-### 📦 Advanced Topics
-- Custom Nginx configuration
-- Composer dependency management
-- Environment-specific code
-- Shadow (staging) environment usage
+### Security Best Practices
+- SSH key onboarding with IPv4-safe flow
+- Session/password incident response
+- Operational safety for production changes
 
 ## Key Differentiators
 
-Unlike generic WordPress hosting, Seravo provides:
+Compared with generic WordPress hosting workflows:
+1. Seravo custom `wp-*` command ecosystem
+2. Git-based deployment model
+3. Bedrock-inspired directory layout under `/data/wordpress`
+4. DDEV-first local workflow for better ARM and agent compatibility
+5. SSH-first operations and hardened access practices
 
-1. **Custom tooling**: 30+ custom `wp-*` commands for common tasks
-2. **Git-first deployment**: Push code directly to production via Git
-3. **Bedrock-inspired structure**: Modified directory layout with `/data` namespace
-4. **Environment parity**: Docker containers that exactly mirror production
-5. **SSH-only access**: No FTP, enhanced security model
-6. **Finnish hosting**: Based in Finland with Finnish support
+## Quick Start Prompts
 
-## Quick Start Examples
-
-### Get help with backups
-```
+### Backup before production changes
+```text
 I need to backup my Seravo site before making changes. What's the command?
 ```
 
-### Git deployment
-```
+### Deploy with Git
+```text
 I've made changes locally. Walk me through deploying to production using Git.
 ```
 
-### Database sync
-```
-How do I pull the production database to my local environment?
-```
-
-### Troubleshooting
-```
-Changes aren't showing on my site. How do I clear all caches?
+### Local setup with DDEV
+```text
+Set up this Seravo project locally with DDEV and explain required wp-config changes.
 ```
 
-### Local setup
+### Pull production data to local
+```text
+How do I import production database and plugins/themes to local DDEV safely?
 ```
-I'm setting up local development with Docker. What's the process?
+
+### Troubleshoot caching
+```text
+Local WP-CLI fails with RedisException. What should I change in this Seravo template?
 ```
-
-## Evaluation Coverage
-
-The skill includes 25 comprehensive evaluation cases covering:
-
-- Command reference and usage
-- Complete workflows (development → deployment)
-- Configuration file setup
-- Database operations
-- Performance debugging
-- Security workflows
-- Migration procedures
-- Multisite management
-- Troubleshooting scenarios
 
 ## Directory Structure
 
-```
+```text
 seravo-dev/
-├── SKILL.md              # Main skill file (comprehensive guide)
-├── README.md             # This file
-├── evals.json            # Per-skill evaluation test cases
-└── references/           # Detailed procedures and topic-specific docs
+├── SKILL.md
+├── README.md
+├── evals.json
+└── references/
 ```
-
-## Installation
-
-To use this skill:
-
-1. **Via claude.ai Projects**: Upload `SKILL.md` as project knowledge
-2. **Via API**: Include skill content in system prompt or use as tool documentation
-3. **For testing**: Use skill-creator to run evaluations
 
 ## Skill Philosophy
 
-### Comprehensive Context
-This skill provides **workflows with context**, not just command lists. Each response explains:
-- What the command does
-- When to use it
-- What to watch out for
-- Related commands and workflows
+### Workflow + Context
+Responses should explain both what to run and why, not only command snippets.
 
-### Developer-Focused
-Written for developers who:
-- Understand terminal/SSH usage
-- Work with Git version control  
-- Need production-ready workflows
-- Value understanding over copy-paste
+### Safety First
+Potentially destructive operations require backup recommendation and a verification
+step.
 
-### Safety-First
-Every destructive operation includes:
-- Backup recommendations
-- Warnings about risks
-- Verification steps
-- Recovery procedures
+### Environment-Aware Guidance
+Advice should adapt to `production`, `shadow/staging`, and `local` contexts.
 
-### Environment-Aware
-Guidance adapts to:
-- Production vs staging vs local
-- Single site vs WordPress Network
-- Different WP_ENV contexts
-- Security implications per environment
+### DDEV-First Local Strategy
+Legacy Docker/Vagrant local commands are treated as deprecated guidance, not default
+execution path.
 
 ## Usage Tips
 
-### For Quick Commands
-Ask directly:
+For quick commands:
 - "What's the command to backup?"
-- "How do I clear cache?"
-- "Show me database export syntax"
+- "How do I clear cache on Seravo?"
+- "How do I verify DB environment variables?"
 
-### For Workflows
-Ask for complete flows:
-- "Walk me through deploying changes"
-- "How do I set up local development?"
-- "What's the migration workflow?"
+For complete workflows:
+- "Walk me through local setup + DB import + URL replacement."
+- "How do I migrate a Seravo template to modern Composer/Dotenv support?"
 
-### For Troubleshooting
-Describe the issue:
-- "Database import is failing with ENGINE errors"
-- "Can't SSH to my site"
-- "Site is slow, what debugging tools exist?"
+For troubleshooting:
+- "DDEV WP-CLI cannot find installation unless I pass --path"
+- "Composer update fails due to old plugin API constraints"
+- "Local Redis object-cache breaks CLI commands"
 
-### For Configuration
-Ask about setup:
-- "What goes in config.yml?"
-- "How do I configure multisite locally?"
-- "Where do custom Nginx configs go?"
+## Maintenance Notes
 
-## What Makes This Skill Special
-
-1. **Built from official documentation**: Primarily compiled from https://help.seravo.com/en/
-2. **Real-world workflows**: Based on actual developer patterns and needs
-3. **Complete coverage**: All four priority areas with comprehensive detail
-4. **Finnish context**: Understands Seravo's unique position in Finnish WordPress hosting
-5. **Opinionated improvements**: Additions and changes by Aivokone to make guidance more actionable for day-to-day developer ops
-6. **Production-tested patterns**: Workflows that work in real Seravo environments
-
-## Skill Maintenance
-
-This skill is based on Seravo's documentation as of February 2025. Key areas to watch for updates:
-
-- New `wp-*` commands added by Seravo
-- Docker image changes (Vagrant is already deprecated)
-- config.yml schema updates
-- New Nginx/PHP versions
-- Additional environment variables
+Track updates in:
+- Seravo custom command set and host environment conventions
+- DDEV and PHP version guidance
+- Seravo template compatibility points (Composer constraints, Dotenv usage)
+- Migration/troubleshooting patterns for ARM Apple Silicon environments
 
 ## Testing the Skill
 
-Run evaluations using skill-creator:
+Run evaluations using skill tooling:
 
 ```bash
 # Test all scenarios
 skill-creator eval seravo-dev-skill --all
 
-# Test specific workflow
-skill-creator eval seravo-dev-skill --eval "Git deployment workflow"
-
-# Benchmark performance
-skill-creator benchmark seravo-dev-skill
+# Test a specific workflow
+skill-creator eval seravo-dev-skill --eval "Complete deployment workflow"
 ```
-
-## Contributing
-
-To improve this skill:
-
-1. Add new evaluation cases for uncovered scenarios
-2. Update command references when Seravo releases new tools
-3. Add troubleshooting patterns for common issues
-4. Expand multisite and advanced configuration examples
 
 ## Related Resources
 
-- **Seravo Documentation (primary source)**: https://help.seravo.com/en/
-- **Developer Docs**: https://help.seravo.com/en/collections/929963-developer-documentation
-- **GitHub Template**: https://github.com/Seravo/wordpress
-- **Aivokone (opinionated additions)**: https://github.com/aivokone
-- **Docker Hub**: Search for Seravo's WordPress images
+- Seravo docs: https://help.seravo.com/en/
+- Seravo developer docs: https://help.seravo.com/en/collections/929963-developer-documentation
+- Seravo template repo: https://github.com/Seravo/wordpress
+- DDEV docs: https://ddev.readthedocs.io/
+- Aivokone profile: https://github.com/aivokone
 
 ## License
 
-This skill is created for use with Claude and follows Anthropic's skill guidelines. The knowledge is compiled from publicly available Seravo documentation and includes opinionated additions and changes by Aivokone.
-
----
-
-**Created with**: skill-creator  
-**Target audience**: WordPress developers using Seravo hosting  
-**Skill level**: Comprehensive guide with workflows + context  
-**Coverage**: All major developer workflows and troubleshooting scenarios
+This skill follows Anthropic/Codex skill authoring conventions. Knowledge is
+compiled from public documentation and operational experience.

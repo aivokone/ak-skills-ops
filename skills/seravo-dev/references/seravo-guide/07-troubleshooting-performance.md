@@ -1,233 +1,124 @@
-## Troubleshooting & Performance
+## Troubleshooting and Performance
 
 ### Common Issues
 
-**1. "Permission denied" errors**
+### 1) SSH access fails (`Permission denied`, host key errors)
 
-Use an IPv4-safe Seravo SSH bootstrap (host key first, then key copy):
+Use IPv4-safe onboarding:
+
 ```bash
-# Generate key if needed (preferred)
-ssh-keygen -t ed25519 -C "your_email@example.com"
-
-# Add host profile (Seravo SSH often needs IPv4 forced)
-cat >> ~/.ssh/config <<'EOF'
-Host mysite
-    HostName example.seravo.com
-    Port 12345
-    User example
-    IdentityFile ~/.ssh/id_ed25519
-    IdentitiesOnly yes
-    AddressFamily inet
-EOF
-
-# Add host key first (avoids "Host key verification failed")
-ssh-keyscan -4 -p 12345 example.seravo.com >> ~/.ssh/known_hosts
-
-# Copy public key to server
-ssh-copy-id -o AddressFamily=inet -p 12345 user@example.seravo.com
-
-# Verify SSH
-ssh -4 -p 12345 user@example.seravo.com 'echo OK'
+ssh-keyscan -4 -p PORT HOST >> ~/.ssh/known_hosts
+ssh-copy-id -o AddressFamily=inet -p PORT USER@HOST
+ssh -4 -p PORT USER@HOST 'echo OK'
 ```
 
-If you are in a non-interactive shell (agent/CI), `ssh-copy-id` may not be able to prompt for password:
-```bash
-if ! command -v sshpass >/dev/null; then
-  if command -v brew >/dev/null; then
-    brew install hudochenkov/sshpass/sshpass
-  elif command -v apt-get >/dev/null; then
-    sudo apt-get update && sudo apt-get install -y sshpass
-  else
-    echo "Install sshpass manually for your OS, then re-run."
-  fi
-fi
+If `ssh-copy-id` is non-interactive, use `sshpass` fallback.
 
-SSHPASS='YOUR_PASSWORD' sshpass -e ssh-copy-id -o AddressFamily=inet -p 12345 user@example.seravo.com
+### 2) Apple Silicon local runtime failures with Seravo legacy image
+
+Symptoms can include container crashes, QEMU instability, disk lock errors, and
+TTY issues in agent shells. Preferred fix:
+
+- Stop using Seravo local Docker/Vagrant helper flow as primary local path.
+- Use DDEV workflow (`ddev config`, `ddev start`, host-side SSH export, direct rsync).
+
+### 3) DDEV WP-CLI cannot find WordPress
+
+In Seravo template layout, always pass path in DDEV:
+
+```bash
+ddev wp plugin list --path=/var/www/html/htdocs/wordpress
 ```
 
-Windows users: Manually copy `.pub` key to `~/.ssh/authorized_keys` on server.
+### 4) `RedisException` in local CLI or requests
 
-If `ssh-keyscan` fails with `Broken pipe`, confirm with verbose SSH (IPv4 forced):
+Seravo `object-cache.php` expects Redis integration.
+Disable drop-in locally if Redis is not configured:
+
 ```bash
-ssh -v -4 -p 12345 user@example.seravo.com 'exit'
-```
-If logs show IPv6 attempts failing before IPv4 succeeds, keep `AddressFamily inet` in config.
-
-**2. Local site not accessible (Docker)**
-
-Check container status:
-```bash
-docker-compose ps
-
-# If not running:
-docker-compose up -d
-
-# Check logs:
-docker-compose logs
+mv htdocs/wp-content/object-cache.php htdocs/wp-content/object-cache.php.seravo-bak
 ```
 
-Verify domains in config.yml and hosts file:
-```bash
-# On macOS/Linux
-cat /etc/hosts | grep wordpress.local
+### 5) Composer dependency conflicts on old template snapshots
 
-# Should see container IP → domain mapping
+If Composer complains about plugin API/version constraints:
+
+- Update Composer constraints for Composer 2 compatibility
+- Run `composer update --no-interaction`
+- Verify `htdocs/wordpress` exists
+
+### 6) Dotenv runtime errors after dependency update
+
+Use modern API in `wp-config.php`:
+
+```php
+$dotenv = Dotenv\Dotenv::createMutable($root_dir);
+$dotenv->load();
 ```
 
-If using .local domains, ensure avahi: true in config.yml.
+### 7) Git push rejected
 
-**3. Database import fails**
+Common checks:
 
-Remove ENGINE definitions:
 ```bash
-# Edit SQL file to remove ENGINE=InnoDB or ENGINE=MyISAM
-sed -i 's/ENGINE=InnoDB//g' database.sql
-sed -i 's/ENGINE=MyISAM//g' database.sql
-
-# Then import
-wp db import database.sql --skip-optimization
-```
-
-**4. Asset proxy not working**
-
-Verify configuration:
-```bash
-# Check config.yml has production domain
-cat config.yml | grep domain
-
-# Manually activate
-wp-activate-asset-proxy
-
-# Test internet connectivity from container
-ping -c 3 google.com
-```
-
-**5. Git push rejected**
-
-Check for test failures:
-```bash
-# View git hooks
 cat .git/hooks/pre-commit
 cat .git/hooks/pre-push
-
-# Test manually
 php -l wp-content/themes/mytheme/*.php
-
-# Bypass (use sparingly)
-git push production master --no-verify
 ```
 
-**6. Nginx 403 errors on Adminer**
+For GitHub auth collisions with Seravo SSH settings, prefer HTTPS `origin` and
+`gh auth setup-git`.
 
-Enable Adminer feature:
-```bash
-srv feature adminer --status
-srv feature adminer --enable
-```
+### 8) Cache issues on Seravo server
 
-**7. Cache not clearing**
+Use full Seravo purge:
 
-Nuclear option:
 ```bash
 wp-purge-cache
-# Purges: Nginx proxy, object cache, rewrite cache, PageSpeed
-
-# Verify
-curl -I https://example.com | grep -i cache
 ```
 
-**8. Multisite URL issues**
+For local DDEV cache flush:
 
-For networks, verify DOMAIN_CURRENT_SITE:
 ```bash
-# Check environment
-wp-list-env | grep DOMAIN
-
-# In wp-config.php, should see:
-if ('development' === getenv('WP_ENV')) {
-    define('DOMAIN_CURRENT_SITE', 'example.local');
-} else {
-    define('DOMAIN_CURRENT_SITE', 'example.com');
-}
+ddev wp cache flush --path=/var/www/html/htdocs/wordpress
 ```
 
-### Performance Optimization
+### 9) Multisite URL issues
 
-**1. Identify slow queries**
+Confirm `DOMAIN_CURRENT_SITE` behavior by environment and validate replacements
+for each subsite (`--url=`) when debugging.
+
+## Performance Optimization
+
+### Server-side quick checks
+
 ```bash
-wp db query "SHOW FULL PROCESSLIST;"
-
-# Check slow query log (if enabled)
-tail -f /data/log/mysql-slow.log
-```
-
-**2. Benchmark site performance**
-```bash
-# PHP page load time
 wp-speed-test
-
-# Load testing
 wp-load-test
-
-# Check object cache status
-wp cache info  # If Redis/Memcached enabled
-```
-
-**3. Database optimization**
-```bash
-# Optimize all tables
 wp db optimize
-
-# Clean up
-wp transient delete --all
-wp post delete $(wp post list --post_status=trash --format=ids)
 ```
 
-**4. Monitor resource usage**
+### Logs
 
-Check logs:
 ```bash
-# Error log
 tail -f /data/log/php-error.log
-
-# Access log
 tail -f /data/log/nginx-access.log
-
-# Application log
 tail -f /data/log/wordpress.log
 ```
 
-**5. Nginx configuration**
+### Database and health diagnostics
 
-Seravo manages Nginx. For custom configuration:
-- Create `/data/wordpress/nginx/*.conf` files
-- They're automatically included
-- Test with: `nginx -t`
-- Reload: `systemctl reload nginx` (via support if needed)
-
-### Advanced Diagnostics
-
-**Check site health**:
 ```bash
+wp db query "SHOW FULL PROCESSLIST;"
 wp site health status
-```
-
-**Verify cron**:
-```bash
 wp cron event list
-wp cron test
 ```
 
-**Plugin conflicts**:
-```bash
-# Deactivate all
-wp plugin deactivate --all
+### Plugin conflict isolation
 
-# Activate one by one to identify culprit
+```bash
+wp plugin deactivate --all
 wp plugin activate plugin-name
 ```
 
-**Must-use plugins** (in wp-content/mu-plugins/):
-- Auto-activated, can't be disabled via wp-cli
-- Remove with: `rm -rf wp-content/mu-plugins/plugin-name`
-- Always backup first: `wp-backup`
+For must-use plugin incidents, inspect `wp-content/mu-plugins/` directly.

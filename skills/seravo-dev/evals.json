@@ -4,10 +4,10 @@
     "prompt": "I need to backup my Seravo site before making changes. What's the command and what does it actually do?",
     "expectations": [
       "Provides wp-backup command",
-      "Explains it backs up both database AND /data directory",
-      "Mentions it uses rdiff-backup",
-      "Notes it runs automatically every night",
-      "Suggests running before major changes"
+      "Explains it backs up both database and /data directory",
+      "Mentions rdiff-backup context",
+      "Notes nightly automated backups",
+      "Suggests running backup before risky operations"
     ]
   },
   {
@@ -16,31 +16,31 @@
     "expectations": [
       "Shows git add and git commit steps",
       "Mentions git push production master",
-      "Explains git hooks may run tests",
-      "Recommends testing locally first",
-      "Mentions meaningful commit messages"
+      "Mentions validation/testing before push",
+      "Recommends meaningful commit messages",
+      "Includes post-deploy verification guidance"
     ]
   },
   {
-    "name": "Local Docker setup",
-    "prompt": "I'm setting up a new Seravo project locally with Docker. What are the essential steps to get it running?",
+    "name": "Local DDEV setup",
+    "prompt": "I'm setting up a new Seravo project locally. What are the essential DDEV steps to get it running?",
     "expectations": [
-      "Mentions docker-compose up",
-      "References config.yml configuration",
-      "Explains SSH access to container",
-      "Mentions wp-development-up command",
-      "Notes visiting https://wordpress.local or configured domain"
+      "Mentions ddev config and ddev start",
+      "Includes composer update --no-interaction for older templates",
+      "Mentions wp-config.php DDEV include + DB constant guards",
+      "Mentions disabling Seravo object-cache drop-in locally",
+      "Uses DDEV-first guidance instead of docker-compose or wp-development-up"
     ]
   },
   {
     "name": "Database sync from production",
-    "prompt": "How do I pull the production database to my local development environment? I want to make sure URLs are updated correctly.",
+    "prompt": "How do I pull the production database to my local development environment and update URLs correctly?",
     "expectations": [
-      "Shows wp-pull-production-db command",
-      "Explains automatic URL replacement",
-      "Mentions URLs from config.yml are used",
-      "Suggests wp-purge-cache after import",
-      "Notes this is safe and doesn't affect production"
+      "Shows ssh wp db export stream command",
+      "Shows ddev import-db usage",
+      "Includes ddev wp search-replace with --all-tables",
+      "Includes required --path=/var/www/html/htdocs/wordpress",
+      "Mentions cache flush after import"
     ]
   },
   {
@@ -48,55 +48,54 @@
     "prompt": "Where should I put my custom theme on a Seravo server? I'm confused about the directory structure.",
     "expectations": [
       "Specifies /data/wordpress/htdocs/wp-content/themes/",
-      "Explains WordPress core is in separate directory",
-      "Mentions core is at /data/wordpress/htdocs/wordpress/",
-      "Explains this separation helps with version control",
-      "Notes not to modify core files"
+      "Explains WordPress core location /data/wordpress/htdocs/wordpress/",
+      "Warns against editing core directly",
+      "Mentions separation of core and project content",
+      "Keeps answer Seravo-specific"
     ]
   },
   {
     "name": "Cache clearing troubleshooting",
-    "prompt": "I updated my site but changes aren't showing. How do I clear all caches on Seravo?",
+    "prompt": "I updated my site but changes aren't showing. How do I clear caches on Seravo and locally?",
     "expectations": [
-      "Shows wp-purge-cache command",
-      "Lists what caches are cleared: Nginx proxy, object cache, rewrite cache, PageSpeed",
-      "Mentions this clears ALL server caches",
-      "Suggests when to use it: after DB imports, config changes, debugging"
+      "Shows wp-purge-cache for Seravo environment",
+      "Shows ddev wp cache flush for local DDEV",
+      "Includes required --path in DDEV command",
+      "Explains environment difference between server and local",
+      "Suggests verification after cache clear"
     ]
   },
   {
     "name": "SSH connection setup",
     "prompt": "I keep getting 'Permission denied' when trying to SSH to my Seravo site. How do I set up SSH keys properly?",
     "expectations": [
-      "Shows ssh-keygen command for generating keys",
-      "Shows ~/.ssh/config Host entry with AddressFamily inet",
-      "Shows ssh-keyscan -4 -p PORT HOST before ssh-copy-id",
-      "Explains ssh-copy-id with port number and IPv4-safe option",
-      "Mentions sshpass fallback for non-interactive shells",
-      "Mentions testing with ssh -4",
-      "Notes Windows users need manual key copy"
+      "Shows ssh-keygen command",
+      "Shows ssh-keyscan -4 host key step",
+      "Shows ssh-copy-id with port",
+      "Mentions AddressFamily inet option",
+      "Includes ssh -4 verification command"
     ]
   },
   {
     "name": "SSH keyscan broken pipe handling",
     "prompt": "ssh-keyscan keeps failing with Broken pipe for my Seravo host. What should I do?",
     "expectations": [
-      "Explains IPv6-first resolution can fail while IPv4 works",
-      "Shows ssh-keyscan -4 -p PORT HOST",
-      "Suggests AddressFamily inet in ~/.ssh/config",
-      "Shows ssh -v -4 verification command",
-      "Avoids writing real credentials in examples"
+      "Explains IPv6-first resolution can fail",
+      "Shows ssh-keyscan -4 command",
+      "Suggests AddressFamily inet in ssh config",
+      "Shows verbose ssh verification command",
+      "Avoids real credentials in examples"
     ]
   },
   {
-    "name": "config.yml configuration",
-    "prompt": "What should I put in my config.yml file? I need to set up local development with a custom domain.",
+    "name": "DDEV wp-config compatibility patch",
+    "prompt": "My Seravo template doesn't read DDEV DB settings correctly. What should I change in wp-config.php?",
     "expectations": [
-      "Shows basic config.yml structure",
-      "Includes name, production (domain, ssh_port), and development sections",
-      "Shows development.domains array",
-      "Explains pull_production_db/plugins/themes options",
-      "Mentions avahi for .local domain resolution"
+      "Adds wp-config-ddev.php include before DB settings",
+      "Uses !defined guards around DB constants",
+      "Explains why getenv-only patterns conflict with DDEV override logic",
+      "Includes Dotenv::createMutable and load example",
+      "Keeps patch scoped to compatibility"
     ]
   },
   {
@@ -104,88 +103,86 @@
     "prompt": "How do I see my database credentials on Seravo? I need to connect with a GUI tool.",
     "expectations": [
       "Shows wp-list-env command",
-      "Mentions environment variables for DB credentials",
-      "Explains wp-config.php uses getenv()",
-      "Shows filtering with grep (e.g., wp-list-env | grep DB_)",
-      "May mention SSH tunnel for external tools"
+      "Mentions filtering with grep DB_",
+      "Explains credentials are environment-driven",
+      "May mention SSH tunnel for GUI access",
+      "Does not invent unsupported direct public MySQL access"
     ]
   },
   {
     "name": "Multisite URL replacement",
-    "prompt": "I have a WordPress multisite and I'm pulling the production database locally. Will the subdomains get updated automatically?",
+    "prompt": "I have a WordPress multisite and I'm importing production data into local DDEV. What should I watch for?",
     "expectations": [
-      "Confirms automatic subdomain mapping",
-      "Gives example: site1.example.com → site1.wordpress.local",
-      "Mentions subdomains must be in config.yml development.domains",
-      "References wp-pull-production-db handles this",
-      "May mention DOMAIN_CURRENT_SITE configuration"
+      "Mentions explicit search-replace strategy for multisite",
+      "Mentions using --url or --network where appropriate",
+      "Includes required --path for DDEV WP-CLI",
+      "Warns to verify domain mappings after import",
+      "Mentions per-subsite validation"
     ]
   },
   {
     "name": "Custom WP-CLI command discovery",
-    "prompt": "What custom commands does Seravo provide? I want to see what tools are available beyond standard wp-cli.",
+    "prompt": "What custom commands does Seravo provide beyond standard wp-cli?",
     "expectations": [
       "Lists key custom commands with wp- prefix",
-      "Mentions categories: backup, database sync, development, cache, security",
-      "Highlights commonly used ones: wp-backup, wp-pull-production-db, wp-purge-cache",
-      "Notes wp-list-env for environment variables",
-      "Mentions man <command> or command --help for details"
+      "Highlights wp-backup, wp-purge-cache, wp-list-env",
+      "Distinguishes server commands from local DDEV workflow",
+      "Mentions command --help or man for details",
+      "Avoids promoting deprecated local helper commands as default"
     ]
   },
   {
     "name": "Database export and import",
-    "prompt": "I need to export the database, make some manual edits, and import it back. What's the workflow?",
+    "prompt": "I need to export the database, make edits, and import it back. What's the workflow?",
     "expectations": [
-      "Shows wp db export filename.sql",
-      "Explains editing the SQL file",
-      "Shows wp db import filename.sql",
-      "Mentions --skip-optimization flag for faster imports",
-      "Recommends wp-backup before destructive operations",
-      "May mention wp db reset to clear existing data first"
+      "Shows wp db export syntax",
+      "Shows wp db import syntax",
+      "Mentions --skip-optimization option",
+      "Recommends backup before destructive operations",
+      "Includes URL replacement reminder if environment changes"
     ]
   },
   {
     "name": "Performance debugging",
     "prompt": "My site feels slow. What Seravo-specific tools can I use to measure and debug performance?",
     "expectations": [
-      "Mentions wp-speed-test for page load times",
-      "Shows wp-load-test for request capacity",
-      "References log files in /data/log/",
-      "Suggests wp-purge-cache to eliminate cache issues",
-      "May mention database optimization with wp db optimize"
+      "Mentions wp-speed-test",
+      "Mentions wp-load-test",
+      "References /data/log/ logs",
+      "May mention wp db optimize",
+      "Separates local and server cache/debug context"
     ]
   },
   {
     "name": "Must-use plugin management",
     "prompt": "How do I remove a must-use plugin on Seravo? The regular wp plugin delete doesn't work.",
     "expectations": [
-      "Explains must-use plugins are in wp-content/mu-plugins/",
-      "Notes they auto-activate and can't be disabled normally",
-      "Shows using rm command to delete from filesystem",
-      "Recommends wp-backup before deletion",
-      "Provides example: rm -rf wp-content/mu-plugins/plugin-name"
+      "Explains mu-plugins path",
+      "Notes auto-activation behavior",
+      "Shows filesystem removal approach",
+      "Recommends backup before deletion",
+      "Provides concrete example path"
     ]
   },
   {
     "name": "Shadow environment usage",
-    "prompt": "What's the difference between shadow and production environments on Seravo? How do I use shadow for testing?",
+    "prompt": "What's the difference between shadow and production on Seravo, and how should I use shadow safely?",
     "expectations": [
-      "Explains shadow is staging/testing environment",
-      "Mentions different SSH port for shadow",
-      "Shows wp-pull-shadow-db or wp-pull-staging-db",
-      "Recommends testing updates/changes on shadow first",
-      "Notes shadow has separate environment but same codebase"
+      "Explains shadow as staging/testing environment",
+      "Mentions separate SSH port",
+      "Recommends testing risky changes on shadow first",
+      "Mentions backup and verification discipline",
+      "Keeps production separation clear"
     ]
   },
   {
     "name": "Migration workflow",
-    "prompt": "I'm migrating a WordPress site TO Seravo from another host. What's the recommended SSH/WP-CLI method?",
+    "prompt": "I'm migrating a WordPress site to Seravo from another host. What's the recommended method?",
     "expectations": [
-      "Suggests SSH + WP-CLI as most reliable",
-      "Shows wp db export on old server",
-      "Shows rsync for database and wp-content",
-      "Includes wp db import steps",
-      "Shows wp search-replace for URL updates",
+      "Suggests SSH plus WP-CLI as reliable method",
+      "Shows db export/import sequence",
+      "Shows wp-content sync with rsync",
+      "Includes wp search-replace for URLs",
       "Mentions wp-purge-cache after migration"
     ]
   },
@@ -193,101 +190,110 @@
     "name": "Git hooks and testing",
     "prompt": "How can I set up automated tests that run when I commit code on Seravo?",
     "expectations": [
-      "Mentions wp-activate-git-hooks command",
-      "Explains hooks run on git commit",
-      "Shows tests in .git/hooks/ directory",
-      "Mentions pre-commit for syntax checking",
-      "Notes tests prevent broken code from being pushed"
+      "Mentions wp-activate-git-hooks",
+      "Explains hook locations in .git/hooks",
+      "Mentions pre-commit style checks",
+      "Notes these checks reduce broken deploy risk",
+      "Keeps guidance practical"
     ]
   },
   {
-    "name": "Asset proxy understanding",
-    "prompt": "What's the asset proxy in Seravo's local development? My images aren't loading locally.",
+    "name": "Uploads strategy in DDEV",
+    "prompt": "I need media files locally. What's the best uploads strategy with this Seravo + DDEV workflow?",
     "expectations": [
-      "Explains asset proxy fetches missing media from production",
-      "Mentions requires internet connection and production domain in config.yml",
-      "Shows wp-activate-asset-proxy command",
-      "Notes it's automatic for uploads/ directory",
-      "Helps save disk space during development"
+      "Provides three options: full rsync, proxy, skip",
+      "Recommends proxy as default when uploads are large",
+      "Mentions running uploads step last",
+      "Asks or confirms user preference before choosing",
+      "Includes .ddev/nginx_full/uploads-proxy.conf pattern for proxy option"
     ]
   },
   {
     "name": "Security audit workflow",
-    "prompt": "I think someone unauthorized accessed my site. What Seravo commands help me audit access and changes?",
+    "prompt": "I think someone unauthorized accessed my site. What Seravo commands help audit access and changes?",
     "expectations": [
-      "Shows wp-last-ssh-logins for SSH access history",
-      "Shows wp-last-wp-logins for WordPress logins",
-      "Mentions wp-backup-list-changes for file modifications",
-      "Recommends wp-reset-all-sessions to force re-login",
-      "Suggests wp-check-haveibeenpwned for compromised passwords"
+      "Shows wp-last-ssh-logins",
+      "Shows wp-last-wp-logins",
+      "Mentions wp-backup-list-changes",
+      "Suggests wp-reset-all-sessions",
+      "May mention compromised password checks"
     ]
   },
   {
     "name": "Nginx configuration",
-    "prompt": "Can I customize Nginx configuration on Seravo? I need to add custom headers.",
+    "prompt": "Can I customize Nginx on Seravo? I need custom headers.",
     "expectations": [
       "Confirms custom config in /data/wordpress/nginx/*.conf",
-      "Shows example of .conf file",
-      "Mentions configs are auto-included",
-      "Shows testing with nginx -t",
-      "Notes Nginx reloads automatically if valid"
+      "Shows simple .conf example",
+      "Mentions nginx -t validation",
+      "Mentions config inclusion behavior",
+      "Stays within supported operational guidance"
     ]
   },
   {
     "name": "Composer dependency management",
-    "prompt": "How do I use Composer to manage plugins on Seravo?",
+    "prompt": "Composer update fails in an older Seravo template. What constraints should I change?",
     "expectations": [
-      "Confirms Composer is supported",
-      "Shows composer require for installing packages",
-      "Mentions wpackagist for WordPress plugins/themes",
-      "Shows composer.json location at /data/wordpress/",
-      "May mention composer install --no-dev for production"
+      "Mentions Composer 1 to 2 constraint mismatch",
+      "Provides johnpbloch and composer/installers compatibility ranges",
+      "Mentions vlucas/phpdotenv compatibility range",
+      "Recommends composer update --no-interaction",
+      "Mentions verifying htdocs/wordpress exists afterwards"
     ]
   },
   {
     "name": "Environment-specific code",
-    "prompt": "I want to enable WP_DEBUG only in development, not production. How do I do this on Seravo?",
+    "prompt": "I want WP_DEBUG only in development, not production. How do I do this on Seravo?",
     "expectations": [
-      "Shows using getenv('WP_ENV')",
-      "Provides conditional example with production/development/staging",
-      "Explains WP_ENV values: production, staging, development",
-      "Shows setting WP_DEBUG based on environment",
-      "May show in wp-config.php or functions.php"
+      "Shows conditional logic based on WP_ENV",
+      "Mentions production vs development behavior",
+      "Uses safe define examples",
+      "Keeps advice environment-aware",
+      "May include staging behavior"
     ]
   },
   {
     "name": "SSH tunnel for database GUI",
     "prompt": "I want to connect to my Seravo database with TablePlus. How do I set up the connection?",
     "expectations": [
-      "Shows SSH tunnel command (ssh -L)",
-      "Mentions connecting to localhost:3306",
-      "Shows getting credentials with wp-list-env",
-      "Notes no direct external MySQL access for security",
-      "Provides port forwarding syntax"
+      "Shows ssh -L tunnel pattern",
+      "Mentions localhost forwarded port usage",
+      "Mentions retrieving credentials with wp-list-env",
+      "Notes direct public DB access is restricted",
+      "Provides clear command structure"
     ]
   },
   {
     "name": "Complete deployment workflow",
-    "prompt": "Walk me through a complete workflow: I'm developing a new feature locally, testing it, and deploying to production on Seravo.",
+    "prompt": "Walk me through a complete workflow: local setup, production data import, testing, and deploy to production on Seravo.",
     "expectations": [
-      "Shows local development in Docker",
-      "Mentions wp-pull-production-db for realistic data",
-      "Shows git commit locally with testing",
-      "Shows git push production master",
-      "Recommends wp-backup before deploy",
-      "Mentions verifying changes on production",
-      "Suggests wp-purge-cache if needed"
+      "Uses DDEV local setup flow",
+      "Mentions SSH export plus ddev import-db",
+      "Includes search-replace with required --path",
+      "Mentions commit and git push production master",
+      "Includes backup and verification checkpoints"
     ]
   },
   {
     "name": "Troubleshooting database import",
-    "prompt": "My database import is failing with ENGINE errors. What's wrong and how do I fix it?",
+    "prompt": "My database import fails with ENGINE errors. What's wrong and how do I fix it?",
     "expectations": [
-      "Identifies ENGINE=InnoDB or ENGINE=MyISAM issue",
-      "Shows sed command to remove ENGINE definitions",
-      "Provides: sed -i 's/ENGINE=InnoDB//g' filename.sql",
-      "Shows import with --skip-optimization",
-      "Explains why this happens (from different servers)"
+      "Identifies ENGINE clause compatibility issue",
+      "Shows sed-based ENGINE removal command",
+      "Suggests re-import with --skip-optimization if needed",
+      "Mentions backup/safe retry posture",
+      "Keeps instructions command-focused"
+    ]
+  },
+  {
+    "name": "Local Redis object-cache issue",
+    "prompt": "In local DDEV, wp commands fail with RedisException from object-cache.php. What is the fix?",
+    "expectations": [
+      "Identifies Seravo object-cache drop-in as root cause",
+      "Shows renaming object-cache.php to .seravo-bak",
+      "Explains local Redis mismatch",
+      "Mentions rerunning DDEV WP-CLI with required --path",
+      "Keeps fix local-only unless Redis is intentionally configured"
     ]
   }
 ]

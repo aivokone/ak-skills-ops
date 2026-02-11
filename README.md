@@ -22,7 +22,7 @@ The table below is the canonical skills index for this repository.
 
 | Name | Slug | Description |
 |------|------|-------------|
-| [Seravo Developer](skills/seravo-dev/) | `seravo-dev` | Seravo-hosted WordPress ops: custom `wp-*` CLI, Git deploys, local Docker/Vagrant setup, DB sync, troubleshooting |
+| [Seravo Developer](skills/seravo-dev/) | `seravo-dev` | Seravo-hosted WordPress ops: custom `wp-*` CLI, Git deploys, DDEV local setup, DB sync, troubleshooting |
 
 ## Skill Catalog
 
@@ -30,7 +30,8 @@ The table below is the canonical skills index for this repository.
 
 Operational WordPress guidance for Seravo-hosted projects, including deployment,
 local environment setup, database workflows, and Seravo-specific incident
-response. Includes IPv4-safe SSH onboarding patterns for Seravo host access.
+response. Includes IPv4-safe SSH onboarding patterns and DDEV-first local
+workflows for Seravo host access and data sync.
 
 Source:
 - `skills/seravo-dev/SKILL.md`

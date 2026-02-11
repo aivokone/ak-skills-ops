@@ -1,6 +1,7 @@
 # Seravo Developer Guide (Index)
 
-This guide is split into small files under `references/seravo-guide/` so an agent can open only the relevant section instead of loading a large monolith.
+This guide is split into small files under `references/seravo-guide/` so an agent
+can open only the relevant section instead of loading a large monolith.
 
 ## Sections
 
@@ -18,13 +19,21 @@ This guide is split into small files under `references/seravo-guide/` so an agen
 - `references/seravo-guide/12-advanced-topics.md`
 - `references/seravo-guide/13-getting-help.md`
 
-
 ## How To Search (Without Opening Everything)
 
 - List sections: `ls references/seravo-guide`
-- Search across sections: `rg -n "wp-backup|wp-pull-production-db|wp-purge-cache|config.yml|deployment|multisite|ssh|keyscan|copy-id|AddressFamily" references/seravo-guide`
-- After you find a hit, open only a small slice around it:
-  - Example: `rg -n "wp-pull-production-db" references/seravo-guide/03-custom-wp-cli-commands.md`
-  - Then: `sed -n '120,220p' references/seravo-guide/03-custom-wp-cli-commands.md`
+- Search across sections:
 
-If you need the end-to-end Seravo -> local -> GitHub workflow, use `references/seravo-to-local-to-github.md`.
+```bash
+rg -n "ddev|wp-backup|wp-purge-cache|composer update|createMutable|object-cache|search-replace|--path=/var/www/html/htdocs/wordpress|deployment|multisite|ssh|keyscan|copy-id|AddressFamily" references/seravo-guide
+```
+
+- After finding a hit, open only a small slice around it:
+
+```bash
+rg -n "ddev start|search-replace|--path=/var/www/html/htdocs/wordpress" references/seravo-guide/05-local-development-setup.md
+sed -n '1,220p' references/seravo-guide/05-local-development-setup.md
+```
+
+If you need the end-to-end Seravo -> local -> GitHub workflow, use
+`references/seravo-to-local-to-github.md`.

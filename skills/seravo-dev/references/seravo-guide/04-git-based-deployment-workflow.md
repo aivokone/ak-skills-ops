@@ -42,7 +42,7 @@ git push production master
 
 **Best practices**:
 1. Always commit with meaningful messages
-2. Test locally in Docker/Vagrant before pushing
+2. Test locally in DDEV before pushing
 3. Review git hooks output for test failures
 4. Keep commits atomic and focused
 5. Use branches for experimental features

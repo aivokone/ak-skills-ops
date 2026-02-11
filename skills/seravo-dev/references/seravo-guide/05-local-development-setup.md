@@ -1,133 +1,126 @@
 ## Local Development Setup
 
-Seravo provides Docker and Vagrant options. **Docker is recommended** (Vagrant is deprecated).
+Use DDEV as the default local runtime for Seravo template projects.
 
-### Docker Setup
+## Why DDEV-First
 
-**Prerequisites**:
-- Docker installed
-- Git repository initialized
-- config.yml configured
+- Better compatibility on Apple Silicon (ARM)
+- Avoids legacy local container helper assumptions (`vagrant` user, TTY-required
+  `docker exec -it`, container key-copy steps)
+- Predictable agent/CI behavior with host-side SSH and DDEV commands
 
-**Starting Container**:
+## Prerequisites
+
+- SSH access to Seravo host (public key already installed)
+- Homebrew
+- DDEV installed
+
 ```bash
-cd /path/to/project
-docker-compose up
-# OR detached mode:
-docker-compose up -d
-
-# Container will print:
-# Success!
-# Visit your site at https://wordpress.local/
-# To enter: ssh wordpress.local -F .vagrant/ssh/config
+brew install ddev/ddev/ddev
+mkcert -install
 ```
 
-**Accessing Container**:
+- Colima or Docker Desktop running
+
+## Bootstrap Steps
+
+### 1) Clone project
+
 ```bash
-# SSH into container
-ssh wordpress.local -F .vagrant/ssh/config
-
-# OR exec as root (for troubleshooting)
-docker-compose exec wordpress bash
-
-# Inside container, run commands:
-wp-development-up  # Import DB/plugins/themes
-wp plugin list
-wp-purge-cache
+ssh-keyscan -4 -p PORT HOST >> ~/.ssh/known_hosts
+git clone --origin production ssh://USER@HOST:PORT/data/wordpress .
 ```
 
-**File Synchronization**:
-- Volumes defined in docker-compose.yml
-- Local directory mounted to /data/wordpress
-- Changes reflect immediately
+If directory is not empty:
 
-### config.yml Configuration
-
-Located at `/data/wordpress/config.yml`. Controls local development behavior.
-
-**Basic Structure**:
-```yaml
-name: mysite
-
-production:
-  domain: example.seravo.com
-  ssh_port: 12345
-
-staging:
-  domain: example.seravo.com
-  ssh_port: 23456
-
-development:
-  domains:
-    - mysite.local
-    - subdomain.mysite.local
-  pull_production_db: never
-  pull_production_plugins: never
-  pull_production_themes: never
-  avahi: true  # For .local domain resolution
-```
-
-**Key Configuration Options**:
-
-`name`: Site identifier (used in container naming)
-
-`production.domain`: Production SSH host
-
-`production.ssh_port`: Production SSH port (from credentials email)
-
-`development.domains`: Local domain names (for Nginx configuration)
-- First domain is primary
-- Add all multisite subdomains here
-
-`pull_production_db`: Auto-sync behavior
-- `always`: Pulls DB on vagrant up
-- `never`: Manual control
-- Recommendation: Use `never` and call `wp-pull-production-db` manually
-
-`pull_production_plugins` / `pull_production_themes`: Same options as DB
-
-`avahi`: Enable .local domain resolution (true/false)
-
-**Multisite Configuration**:
-```yaml
-development:
-  domains:
-    - wordpress.local
-    - site1.wordpress.local
-    - site2.wordpress.local
-```
-
-Subdomains auto-map during `wp-pull-production-db`:
-- site1.example.com → site1.wordpress.local
-- site2.example.com → site2.wordpress.local
-
-### Environment Variables (.env)
-
-**Local override with .env**:
 ```bash
-# Create environment-specific file
-cat > .env.development << EOF
-WP_TEST_URL=https://example.dev
-DOMAIN_CURRENT_SITE=example.dev
-NOBLOGREDIRECT=https://example.dev
-COOKIE_DOMAIN=.example.dev
-EOF
-
-# Symlink to activate
-ln -s .env.development .env
+git init
+git remote add production ssh://USER@HOST:PORT/data/wordpress
+git fetch production
+git checkout -b main production/master
 ```
 
-**Dotenv versions**:
-- 5.0.0+: `Dotenv::createUnsafeImmutable($root_dir)`
-- 2.4.0: `new Dotenv\Dotenv($root_dir)` with `->overload()`
-- "Unsafe" needed for getenv() to work in PHP
+### 2) Composer compatibility upgrade (older templates)
 
-**Security note**: .env is gitignored by default. Never commit it.
+Update `composer.json` constraints:
 
-### Asset Proxy
+- `johnpbloch/wordpress-core-installer`: `^2.0`
+- `johnpbloch/wordpress-core`: `^5.0 || ^6.0`
+- `composer/installers`: `^1.0 || ^2.0`
+- `vlucas/phpdotenv`: `^2.4 || ^5.0`
 
-Local development can automatically fetch missing media files from production:
-- Configured via `wp-activate-asset-proxy`
-- Requires working internet and production domain in config.yml
-- Fetches uploads/ files on-the-fly when not present locally
-- Saves bandwidth and disk space during development
+Then:
+
+```bash
+composer update --no-interaction
+test -d htdocs/wordpress && echo OK
+```
+
+### 3) Configure DDEV
+
+```bash
+ddev config --project-type=wordpress --docroot=htdocs --project-name=SLUG --php-version=8.2
+```
+
+### 4) Patch `wp-config.php`
+
+Add DDEV include before DB constants:
+
+```php
+$ddev_settings = dirname(__FILE__) . '/wp-config-ddev.php';
+if (is_readable($ddev_settings) && !defined('DB_USER')) {
+  require_once($ddev_settings);
+}
+```
+
+Guard Seravo DB constants:
+
+```php
+if (!defined('DB_NAME')) { define('DB_NAME', getenv('DB_NAME')); }
+if (!defined('DB_USER')) { define('DB_USER', getenv('DB_USER')); }
+if (!defined('DB_PASSWORD')) { define('DB_PASSWORD', getenv('DB_PASSWORD')); }
+if (!defined('DB_HOST')) { define('DB_HOST', getenv('DB_HOST')); }
+```
+
+Dotenv API in modern setups:
+
+```php
+$dotenv = Dotenv\Dotenv::createMutable($root_dir);
+$dotenv->load();
+```
+
+### 5) Disable Redis object cache drop-in locally
+
+```bash
+mv htdocs/wp-content/object-cache.php htdocs/wp-content/object-cache.php.seravo-bak
+```
+
+### 6) Start local runtime
+
+```bash
+ddev start
+```
+
+### 7) Verify local WordPress path
+
+In Seravo template layout, use explicit WP path in DDEV:
+
+```bash
+ddev wp option get siteurl --path=/var/www/html/htdocs/wordpress
+ddev wp plugin list --path=/var/www/html/htdocs/wordpress
+```
+
+## Uploads Strategy
+
+Treat uploads as a separate last step. Ask user to choose one option:
+
+1. Full uploads rsync
+2. Proxy missing uploads to production (recommended default)
+3. Skip uploads
+
+Do not run uploads sync by default in early setup steps.
+
+## Legacy Notes
+
+`docker-compose up`, `wp-development-up`, and `wp-pull-production-*` local helper
+commands are legacy patterns and should not be the primary recommendation.

@@ -1,18 +1,11 @@
 ## Advanced Topics
 
-### Custom Nginx Configuration
+### Custom Nginx Configuration on Seravo
 
-Place files in `/data/wordpress/nginx/*.conf`:
+Place files in `/data/wordpress/nginx/*.conf`.
 
-Example - Force HTTPS redirect:
-```nginx
-# /data/wordpress/nginx/force-https.conf
-if ($scheme != "https") {
-    return 301 https://$host$request_uri;
-}
-```
+Example:
 
-Example - Custom headers:
 ```nginx
 # /data/wordpress/nginx/security-headers.conf
 add_header X-Frame-Options "SAMEORIGIN" always;
@@ -20,119 +13,105 @@ add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "no-referrer-when-downgrade" always;
 ```
 
-Test configuration:
+Validate:
+
 ```bash
 nginx -t
-# If valid, Nginx will reload automatically
 ```
 
-### Composer Dependency Management
+### DDEV Uploads Proxy Pattern
 
-Seravo supports Composer for plugin/theme management:
+When uploads are too large to sync locally, proxy missing files to production:
 
-```bash
-# Install dependency
-composer require wpackagist-plugin/query-monitor
-
-# Update dependencies
-composer update
-
-# Install from composer.json
-composer install --no-dev
-```
-
-composer.json location: `/data/wordpress/composer.json`
-
-### Environment-Specific Code
-
-Use WP_ENV for conditional logic:
-
-```php
-// wp-config.php or functions.php
-if ('production' === getenv('WP_ENV')) {
-    // Production-only code
-    define('WP_DEBUG', false);
-} elseif ('development' === getenv('WP_ENV')) {
-    // Development-only code
-    define('WP_DEBUG', true);
-    define('WP_DEBUG_LOG', true);
-} elseif ('staging' === getenv('WP_ENV')) {
-    // Staging-only code
-    define('WP_DEBUG', false);
+```nginx
+# .ddev/nginx_full/uploads-proxy.conf
+location ~* /wp-content/uploads/ {
+    try_files $uri @production;
+}
+location @production {
+    proxy_pass https://PRODUCTION-URL;
 }
 ```
 
-### Automated Testing Integration
+Use this as default recommendation, but always ask user before applying uploads
+strategy.
 
-Git hooks enable automated testing:
+### Composer Dependency Management
+
+For older Seravo template snapshots, run compatibility migration before normal
+workflow:
+
+- `johnpbloch/wordpress-core-installer`: `^2.0`
+- `johnpbloch/wordpress-core`: `^5.0 || ^6.0`
+- `composer/installers`: `^1.0 || ^2.0`
+- `vlucas/phpdotenv`: `^2.4 || ^5.0`
+
+Then:
 
 ```bash
-# Activate hooks
-wp-activate-git-hooks
+composer update --no-interaction
+```
 
-# Add custom tests to .git/hooks/pre-commit
-# Example: PHP syntax check
-find wp-content -name "*.php" -exec php -l {} \;
+### Dotenv and `wp-config.php` Compatibility
+
+Use modern Dotenv API:
+
+```php
+$dotenv = Dotenv\Dotenv::createMutable($root_dir);
+$dotenv->load();
+```
+
+And guard DB constants so DDEV-provided values can take precedence:
+
+```php
+if (!defined('DB_NAME')) { define('DB_NAME', getenv('DB_NAME')); }
+if (!defined('DB_USER')) { define('DB_USER', getenv('DB_USER')); }
+if (!defined('DB_PASSWORD')) { define('DB_PASSWORD', getenv('DB_PASSWORD')); }
+if (!defined('DB_HOST')) { define('DB_HOST', getenv('DB_HOST')); }
+```
+
+### Environment-Specific Code
+
+```php
+if ('production' === getenv('WP_ENV')) {
+    define('WP_DEBUG', false);
+} elseif ('development' === getenv('WP_ENV')) {
+    define('WP_DEBUG', true);
+    define('WP_DEBUG_LOG', true);
+}
 ```
 
 ### Shadow Environment Management
 
-**Purpose**: Test updates, plugins, major changes before production
+Use shadow for risk reduction before production changes:
 
-**Access**:
 ```bash
-# SSH to shadow (different port)
 ssh user@example.seravo.com -p 23456
-
-# Pull from production
-wp-pull-production-db
-wp-pull-production-plugins
-wp-pull-production-themes
-
-# Make changes, test
-# If successful, apply same changes to production
+wp-backup
+wp-list-env | grep WP_ENV
 ```
 
-**Restore production to shadow**:
-- Follow "Restore Site from a Backup into Shadow" workflow
-- Useful for testing with real production data
+For local testing with shadow data, export from shadow host and import to DDEV
+using the same SSH stream pattern as production.
 
 ### WordPress Network Development
 
-**Extra commands for multisite**:
+Useful commands:
+
 ```bash
-# List all sites
 wp site list
-
-# List super admins
 wp super-admin list
-
-# Target specific subsite
 wp plugin list --url=https://example.com/subsite
-
-# Network-wide operations
 wp user list --network
-wp plugin list --network
 ```
 
-**Local multisite setup**:
-```yaml
-# config.yml
-development:
-  domains:
-    - wordpress.local
-    - site1.wordpress.local
-    - site2.wordpress.local
+Local DDEV multisite tasks still require explicit path in Seravo layout:
+
+```bash
+ddev wp option get siteurl --url=https://subsite.example --path=/var/www/html/htdocs/wordpress
 ```
 
-```php
-// wp-config.php
-if ('development' === getenv('WP_ENV')) {
-    define('DOMAIN_CURRENT_SITE', getenv('DEFAULT_DOMAIN'));
-}
-```
+### Local Redis Strategy
 
-**Database considerations**:
-- Shared tables: wp_users, wp_usermeta
-- Site-specific: wp_2_posts, wp_3_posts, etc.
-- List all: `wp db tables --all-tables`
+If local Redis is not intentionally configured, keep Seravo object-cache drop-in
+disabled (`object-cache.php.seravo-bak`) to prevent runtime and CLI failures.

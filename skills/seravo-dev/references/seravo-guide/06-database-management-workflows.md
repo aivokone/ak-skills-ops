@@ -1,95 +1,70 @@
 ## Database Management Workflows
 
-### Production → Local
+## Production -> Local (Recommended)
 
-**Standard workflow**:
+Use host-side SSH export + DDEV import instead of legacy local pull helpers.
+
 ```bash
-# SSH into local Docker/Vagrant
-ssh wordpress.local -F .vagrant/ssh/config
-
-# Pull production database
-wp-pull-production-db
-# Automatically:
-# - Exports production DB
-# - Imports to local
-# - Replaces URLs (example.com → example.local)
-# - Handles multisite subdomains
-
-# Clear caches
-wp-purge-cache
-
-# Verify
-wp option get siteurl
-wp option get home
+ssh -4 -p PORT USER@HOST 'wp db export -' | gzip > /tmp/production.sql.gz
+ddev import-db --file=/tmp/production.sql.gz
 ```
 
-### Local → Production (DANGEROUS)
-
-**Warning**: Rarely needed. Usually only for initial deployment or emergency recovery.
+Run URL replacement in DDEV (path required for Seravo template layout):
 
 ```bash
-# On local machine
-wp db export local-db.sql
+ddev wp search-replace 'https://production-url' 'https://SLUG.ddev.site' \
+  --all-tables --path=/var/www/html/htdocs/wordpress
+
+ddev wp cache flush --path=/var/www/html/htdocs/wordpress
+```
+
+Verify:
+
+```bash
+ddev wp option get siteurl --path=/var/www/html/htdocs/wordpress
+ddev wp option get home --path=/var/www/html/htdocs/wordpress
+```
+
+## Local -> Production (Dangerous)
+
+Rarely needed; prefer code-only deploys. If required:
+
+```bash
+# From local
+DDEV_DB_FILE=/tmp/local-db.sql
+ddev export-db --file="$DDEV_DB_FILE"
 
 # Copy to production
-scp -P 12345 local-db.sql user@example.seravo.com:/data/db/
+scp -P PORT "$DDEV_DB_FILE" USER@HOST:/data/db/local-db.sql
 
-# SSH to production
-ssh user@example.seravo.com -p 12345
-
-# BACKUP FIRST!
+# On production host
+ssh -4 -p PORT USER@HOST
 wp-backup
-
-# Reset and import
 cd /data/wordpress/htdocs
 wp db reset --yes
 wp db import /data/db/local-db.sql --skip-optimization
-
-# Fix URLs
-wp search-replace 'http://example.local' 'https://example.com' --all-tables
-
-# Clear caches
+wp search-replace 'https://SLUG.ddev.site' 'https://production-url' --all-tables
 wp-purge-cache
 ```
 
-### Manual Database Export/Import
+## Manual SQL Troubleshooting
 
-**Export**:
+If import fails with engine clauses from incompatible environments:
+
 ```bash
-wp db export filename.sql
-# Creates SQL dump with filename.sql
+sed -i 's/ENGINE=InnoDB//g' database.sql
+sed -i 's/ENGINE=MyISAM//g' database.sql
 ```
 
-**Import**:
-```bash
-wp db import filename.sql
-# Imports dump
-# Use --skip-optimization for faster imports
-```
+Then re-import with skip optimization when needed.
 
-**Database access**:
-```bash
-# Interactive MySQL shell (auto-authenticated)
-wp db cli
+## Multisite Notes
 
-# Get credentials
-wp-list-env | grep DB_
-```
+- For site-specific rewrites, include `--url=`.
+- For network-wide operations, use `--network` where applicable.
+- Keep replacements explicit and reviewed before production operations.
 
-### URL Search-Replace
+## Legacy Note
 
-**After database sync**:
-```bash
-# Replace URLs in database
-wp search-replace 'old-url.com' 'new-url.com' --all-tables
-
-# Dry run (test without changes)
-wp search-replace 'old-url.com' 'new-url.com' --all-tables --dry-run
-
-# Replace email addresses
-wp search-replace '[email protected]' '[email protected]' --all-tables
-```
-
-**Multisite considerations**:
-- Use `--url=` to target specific subsite
-- Or use `--network` flag for network-wide operations
+`wp-pull-production-db` may still exist in older templates, but SSH export +
+`ddev import-db` is the default recommendation.
