@@ -3,3 +3,6 @@
 
 # Claude/Codex local agent settings (do not commit)
 .claude/settings.local.json
+.claude/skills/
+.agent/
+.agents/
