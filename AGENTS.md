@@ -63,7 +63,7 @@ When modifying a skill's SKILL.md:
 - Keep the main file lean - move detailed procedures to `references/` subdirectories
 - Preserve the frontmatter format (`---` delimiters with `name` and `description`)
 - Use searchable keywords in references so `rg` searches find relevant content
-- Do not add `skills/<skill-name>/README.md`; keep essential behavior in `SKILL.md` and user-facing catalog details in root `README.md`
+- Do not add `skills/<skill-name>/README.md`; keep agent-essential behavior in `SKILL.md` and user-facing catalog details in root `README.md`
 
 ### Adding a New Skill
 
