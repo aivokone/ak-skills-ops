@@ -21,6 +21,15 @@ Use this skill when the user asks about:
 
 Do not use this skill for generic WordPress questions that are not Seravo-specific.
 
+## Upstream Documentation
+
+- Primary docs: https://help.seravo.com/en/
+- Seravo developer docs: https://help.seravo.com/en/collections/929963-developer-documentation
+- Seravo template repo: https://github.com/Seravo/wordpress
+
+This skill intentionally adds DDEV-first local workflows and stricter safety
+guardrails for agent execution.
+
 ## Fast Workflow
 
 1. Identify environment first: `production`, `shadow/staging`, or `local`.
