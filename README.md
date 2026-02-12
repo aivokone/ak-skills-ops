@@ -60,7 +60,7 @@ This repo follows a progressive disclosure pattern: keep `SKILL.md` lean and
 put detailed procedures under `references/`.
 
 Policy: do not add `skills/<skill-name>/README.md`; keep agent-essential
-behavior in `SKILL.md` and keep human-readable catalog details in root
+behavior in `SKILL.md` and keep user-facing catalog details in root
 `README.md`.
 
 When adding a new skill or making a major update to an existing skill, update:
