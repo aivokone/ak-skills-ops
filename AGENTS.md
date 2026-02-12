@@ -20,20 +20,20 @@ ak-skills-ops/
 └── skills/                      # All skills live here
     └── <skill-name>/            # Each skill is self-contained
         ├── SKILL.md             # Skill entry point
-        ├── README.md            # Skill documentation
         ├── evals.json           # Per-skill evaluations
         └── references/          # Skill-specific references
 ```
 
 **Progressive Disclosure Pattern**: Each skill's SKILL.md is intentionally lean (under 500 lines) and references external files. This reduces context usage - load only the specific section needed for a task rather than the entire guide.
 
-### Skill Structure Convention
+### Skill Structure Convention (Per-Skill File Contract)
 
 Each skill follows this pattern:
 - `SKILL.md` - Skill definition with frontmatter (`name`, `description`) and core guidance
 - `evals.json` - Evaluation test cases with prompts and expected outcomes
 - `references/` - Detailed procedures and topic-specific documentation
-- `README.md` - Skill-specific documentation and usage guide
+
+Per-skill `README.md` files are not used in this repository.
 
 ### Current Skills
 
@@ -63,6 +63,7 @@ When modifying a skill's SKILL.md:
 - Keep the main file lean - move detailed procedures to `references/` subdirectories
 - Preserve the frontmatter format (`---` delimiters with `name` and `description`)
 - Use searchable keywords in references so `rg` searches find relevant content
+- Do not add `skills/<skill-name>/README.md`; keep agent-essential behavior in `SKILL.md` and user-facing catalog details in root `README.md`
 
 ### Adding a New Skill
 
@@ -84,9 +85,8 @@ When a skill changes significantly (new output format, behavior model, or
 activation/reporting semantics), update at minimum:
 
 1. `skills/<skill-name>/SKILL.md`
-2. `skills/<skill-name>/README.md`
-3. `skills/<skill-name>/evals.json`
-4. Root `README.md` `Skill Catalog` subsection for that skill
+2. `skills/<skill-name>/evals.json`
+3. Root `README.md` `Skill Catalog` subsection for that skill
 
 ### Adding Reference Content
 

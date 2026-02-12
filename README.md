@@ -33,9 +33,14 @@ local environment setup, database workflows, and Seravo-specific incident
 response. Includes IPv4-safe SSH onboarding patterns and DDEV-first local
 workflows for Seravo host access and data sync.
 
+Primary upstream knowledge comes from Seravo Help Center and Seravo developer
+docs, with practical DDEV-first and safety-first operational patterns curated
+for agent use.
+
 Source:
 - `skills/seravo-dev/SKILL.md`
-- `skills/seravo-dev/README.md`
+- `skills/seravo-dev/references/seravo-guide.md`
+- `skills/seravo-dev/references/seravo-to-local-to-github.md`
 
 Install to project scope:
 
@@ -53,6 +58,10 @@ npx skills add aivokone/ak-skills-ops --skill seravo-dev -g
 
 This repo follows a progressive disclosure pattern: keep `SKILL.md` lean and
 put detailed procedures under `references/`.
+
+Policy: do not add `skills/<skill-name>/README.md`; keep agent-essential
+behavior in `SKILL.md` and keep user-facing catalog details in root
+`README.md`.
 
 When adding a new skill or making a major update to an existing skill, update:
 - `README.md` (both `Skills Index` and `Skill Catalog` section for that skill)
